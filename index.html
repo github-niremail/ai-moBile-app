@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Cercanías Orduña, Radio con Delay & IA</title>
+  <title>Orduña Móvil • Tren, Radio & IA</title>
 
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#007aff">
@@ -44,6 +44,7 @@
     .badge-ontime { background: #e8f5e9; color: #2e7d32; }
     .badge-delay { background: #ffebee; color: #c62828; }
     .badge-planned { background: #e3f2fd; color: #1565c0; }
+    .badge-live-conn { background: #e0f2fe; color: #0284c7; }
 
     /* Módulo Radio */
     .radio-controls { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
@@ -85,6 +86,15 @@
       cursor: pointer;
     }
 
+    /* Subtítulos */
+    .subtitles-container {
+      margin-top: 10px;
+      background: #1c1c1e;
+      border-radius: 10px;
+      padding: 10px 12px;
+      color: #ffffff;
+    }
+
     /* Chat IA */
     #chat-container { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
     .bubble { max-width: 82%; padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.4; word-break: break-word; }
@@ -100,7 +110,7 @@
 <body>
 
   <header>
-    <span>Orduña Móvil • Tren, Radio & Delay</span>
+    <span>Orduña Móvil • Asistente</span>
     <div class="header-btns">
       <button class="btn-icon" onclick="refreshLiveTimes()" title="Refrescar trenes">🔄</button>
       <button class="btn-icon" onclick="configureApiKey()" title="Configuración">⚙️</button>
@@ -108,43 +118,48 @@
   </header>
 
   <div id="top-panels">
-    <!-- Panel Trenes -->
+    <!-- Panel Trenes Orduña (Conectado a Cloudflare Worker) -->
     <div class="app-card">
       <div class="card-header">
-        <span>🚆 C-3 ORDUÑA (HORARIOS)</span>
-        <span id="current-clock">--:--</span>
+        <span>🚆 C-3 ORDUÑA (TIEMPO REAL)</span>
+        <div>
+          <span id="worker-status" class="status-badge badge-live-conn">Worker Activo</span>
+          <span id="current-clock" style="margin-left: 4px;">--:--</span>
+        </div>
       </div>
 
+      <!-- Salida a Bilbao -->
       <div style="font-size:11px; font-weight:bold; color:#555; margin-top:2px;">SALIDA A BILBAO ABANDO</div>
       <div class="service-row">
         <div class="col-time">
-          <div class="col-label">Oficial</div>
+          <div class="col-label">Oficial Renfe</div>
           <div class="col-val" id="dep-official">--:--</div>
           <span class="status-badge badge-planned">Programado</span>
         </div>
         <div class="col-time">
-          <div class="col-label">Tiempo Real</div>
+          <div class="col-label">Estimado en vivo</div>
           <div class="col-val" id="dep-live">--:--</div>
           <span id="dep-status" class="status-badge badge-ontime">En hora</span>
         </div>
       </div>
 
-      <div style="font-size:11px; font-weight:bold; color:#555; margin-top:6px;">LLEGADA PROCEDENTE DE BILBAO</div>
+      <!-- Llegada de Bilbao -->
+      <div style="font-size:11px; font-weight:bold; color:#555; margin-top:6px;">LLEGADA DESDE BILBAO</div>
       <div class="service-row">
         <div class="col-time">
-          <div class="col-label">Oficial</div>
+          <div class="col-label">Oficial Renfe</div>
           <div class="col-val" id="arr-official">--:--</div>
           <span class="status-badge badge-planned">Programado</span>
         </div>
         <div class="col-time">
-          <div class="col-label">Tiempo Real</div>
+          <div class="col-label">Estimado en vivo</div>
           <div class="col-val" id="arr-live">--:--</div>
           <span id="arr-status" class="status-badge badge-ontime">En hora</span>
         </div>
       </div>
     </div>
 
-    <!-- Panel Radio Streaming con Buffer Delay Seguro -->
+    <!-- Panel Radio Streaming con Time-Shift & Subtítulos -->
     <div class="app-card">
       <div class="card-header">
         <span>📻 RADIOS EN STREAMING</span>
@@ -192,17 +207,37 @@
         </div>
       </div>
 
+      <!-- Caja de Subtítulos -->
+      <div class="subtitles-container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-size: 11px; font-weight: bold; text-transform: uppercase; color: #8e8e93;">💬 Subtítulos micrófono</span>
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <select id="sub-lang" style="font-size: 11px; padding: 2px 6px; border-radius: 6px; background: #2c2c2e; color: white; border: 1px solid #3a3a3c;">
+              <option value="es-ES">Español</option>
+              <option value="en-GB">English (UK)</option>
+              <option value="eu-ES">Euskara</option>
+            </select>
+            <button id="sub-toggle-btn" onclick="toggleSubtitles()" style="font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 6px; border: none; background: #34c759; color: white; cursor: pointer;">
+              Activar
+            </button>
+          </div>
+        </div>
+        <div id="subtitles-box" style="height: 48px; overflow-y: auto; font-size: 12px; line-height: 1.4; color: #e5e5ea; font-style: italic; background: rgba(0,0,0,0.25); padding: 6px; border-radius: 6px;">
+          Pulsa «Activar» para transcribir el audio en directo...
+        </div>
+      </div>
+
       <audio id="audio-player" preload="none"></audio>
     </div>
   </div>
 
   <!-- Chat con Gemini -->
   <div id="chat-container">
-    <div class="bubble ai">¡Hola! Puedes escuchar cualquier emisora y desplazar la barra para introducir un retardo sin que se corte el sonido.</div>
+    <div class="bubble ai">¡Hola! He conectado la estación de Orduña a tu Cloudflare Worker en tiempo real. ¿En qué te ayudo hoy?</div>
   </div>
 
   <div id="input-area">
-    <input type="text" id="userInput" placeholder="Escribe un mensaje o pregunta..." autocomplete="off">
+    <input type="text" id="userInput" placeholder="Pregunta sobre trenes, horarios..." autocomplete="off">
     <button id="sendBtn" onclick="sendMessage()">Enviar</button>
   </div>
 
@@ -214,7 +249,7 @@
       });
     }
 
-    // 2. Horarios Renfe C3 Orduña
+    // 2. Horarios Teóricos Renfe C3 Orduña
     const departuresFromOrduna = [
       "05:01", "05:31", "06:12", "06:34", "07:01", "07:29", "08:01", "08:31",
       "09:01", "09:31", "10:01", "10:31", "10:58", "11:30", "12:01", "12:31",
@@ -242,7 +277,29 @@
       return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     }
 
+    // Endpoint del Cloudflare Worker configurado
+    const WORKER_URL = "https://cercanias-orduna-worker.tight-salad-67b5.workers.dev/";
     let liveDelays = { dep: 0, arr: 0 };
+
+    async function fetchRealTimeDelays() {
+      const badge = document.getElementById("worker-status");
+      try {
+        const response = await fetch(WORKER_URL, { cache: "no-store" });
+        if (!response.ok) throw new Error("HTTP " + response.status);
+        
+        const data = await response.json();
+        liveDelays.dep = typeof data.depDelayMinutes === "number" ? data.depDelayMinutes : 0;
+        liveDelays.arr = typeof data.arrDelayMinutes === "number" ? data.arrDelayMinutes : 0;
+        
+        badge.textContent = "Live OK";
+        badge.className = "status-badge badge-ontime";
+      } catch (err) {
+        console.warn("Fallo conectando con Cloudflare Worker:", err);
+        badge.textContent = "Offline (Teórico)";
+        badge.className = "status-badge badge-planned";
+      }
+      return liveDelays;
+    }
 
     async function refreshLiveTimes() {
       const now = new Date();
@@ -250,6 +307,9 @@
       document.getElementById("current-clock").textContent = 
         `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
+      await fetchRealTimeDelays();
+
+      // Próxima Salida (Orduña -> Bilbao)
       const nextDep = departuresFromOrduna.find(t => timeToMinutes(t) >= currentMin) || departuresFromOrduna[0];
       const depMinOfficial = timeToMinutes(nextDep);
       const depMinLive = depMinOfficial + liveDelays.dep;
@@ -257,18 +317,38 @@
       document.getElementById("dep-official").textContent = nextDep;
       document.getElementById("dep-live").textContent = minutesToTime(depMinLive);
 
+      const depBadge = document.getElementById("dep-status");
+      if (liveDelays.dep > 0) {
+        depBadge.textContent = `+${liveDelays.dep} min`;
+        depBadge.className = "status-badge badge-delay";
+      } else {
+        depBadge.textContent = "En hora";
+        depBadge.className = "status-badge badge-ontime";
+      }
+
+      // Próxima Llegada (Bilbao -> Orduña)
       const nextArr = arrivalsAtOrduna.find(t => timeToMinutes(t) >= currentMin) || arrivalsAtOrduna[0];
       const arrMinOfficial = timeToMinutes(nextArr);
       const arrMinLive = arrMinOfficial + liveDelays.arr;
 
       document.getElementById("arr-official").textContent = nextArr;
       document.getElementById("arr-live").textContent = minutesToTime(arrMinLive);
+
+      const arrBadge = document.getElementById("arr-status");
+      if (liveDelays.arr > 0) {
+        arrBadge.textContent = `+${liveDelays.arr} min`;
+        arrBadge.className = "status-badge badge-delay";
+      } else {
+        arrBadge.textContent = "En hora";
+        arrBadge.className = "status-badge badge-ontime";
+      }
     }
 
+    // Actualiza inmediatamente y cada 20 segundos
     refreshLiveTimes();
-    setInterval(refreshLiveTimes, 15000);
+    setInterval(refreshLiveTimes, 20000);
 
-    // 3. Sistema de Reproducción y Retardo Nativo (Sin Web Audio API / Sin CORS)
+    // 3. Radio Streaming con Buffer Time-Shift
     const player = document.getElementById("audio-player");
     const radioBtn = document.getElementById("radio-btn");
     const radioStatus = document.getElementById("radio-status");
@@ -283,7 +363,6 @@
       delayValueLabel.textContent = targetSec === 0 ? "0 segundos (Directo)" : `${targetSec} segundo${targetSec > 1 ? 's' : ''}`;
 
       if (targetSec === 0) {
-        // Volver a directo de inmediato
         if (delayTimer) {
           clearInterval(delayTimer);
           delayTimer = null;
@@ -292,13 +371,10 @@
         if (player.seekable && player.seekable.length > 0) {
           player.currentTime = player.seekable.end(player.seekable.length - 1);
         }
-        if (!player.paused) {
-          radioStatus.textContent = "En directo 🔴";
-        }
+        if (!player.paused) radioStatus.textContent = "En directo 🔴";
         return;
       }
 
-      // Si está sonando y aumentamos el retraso: pausamos temporalmente para acumular el desfase
       if (!player.paused && targetSec > currentDelay) {
         const additionalWait = targetSec - currentDelay;
         player.pause();
@@ -357,7 +433,6 @@
           radioBtn.style.background = "#ff3b30";
           radioBtn.disabled = false;
 
-          // Si el usuario ya tenía configurado un retardo antes de pulsar reproducir
           if (currentDelay > 0) {
             handleDelayInput(currentDelay);
           } else {
@@ -368,8 +443,8 @@
           radioBtn.textContent = "▶ Oír";
           radioBtn.style.background = "#007aff";
           radioBtn.disabled = false;
-          radioStatus.textContent = "Error al emitir";
-          alert("No se pudo reproducir esta emisora en este momento.");
+          radioStatus.textContent = "Error de emisión";
+          alert("No se pudo reproducir este stream en tu dispositivo.");
         }
       } else {
         player.pause();
@@ -394,7 +469,86 @@
       delayValueLabel.textContent = "0 segundos (Directo)";
     });
 
-    // 4. Gemini IA
+    // 4. Subtítulos mediante Reconocimiento de Voz
+    let recognition = null;
+    let isSubtitlesActive = false;
+    const subBox = document.getElementById("subtitles-box");
+    const subBtn = document.getElementById("sub-toggle-btn");
+    const subLang = document.getElementById("sub-lang");
+
+    function initSpeechRecognition() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        subBox.textContent = "Reconocimiento de voz no soportado por este navegador.";
+        subBtn.disabled = true;
+        return null;
+      }
+
+      const rec = new SpeechRecognition();
+      rec.continuous = true;
+      rec.interimResults = true;
+      rec.lang = subLang.value;
+
+      rec.onresult = (e) => {
+        let transcript = "";
+        for (let i = e.resultIndex; i < e.results.length; ++i) {
+          transcript += e.results[i][0].transcript;
+        }
+        subBox.textContent = transcript;
+        subBox.scrollTop = subBox.scrollHeight;
+      };
+
+      rec.onerror = (e) => {
+        if (e.error === "not-allowed") {
+          subBox.textContent = "Permiso de micrófono denegado.";
+          stopSubtitles();
+        }
+      };
+
+      rec.onend = () => {
+        if (isSubtitlesActive) rec.start();
+      };
+
+      return rec;
+    }
+
+    function toggleSubtitles() {
+      if (!recognition) recognition = initSpeechRecognition();
+      if (!recognition) return;
+
+      if (!isSubtitlesActive) {
+        try {
+          recognition.lang = subLang.value;
+          recognition.start();
+          isSubtitlesActive = true;
+          subBtn.textContent = "Detener";
+          subBtn.style.background = "#ff3b30";
+          subBox.textContent = "Escuchando audio...";
+        } catch (e) { console.error(e); }
+      } else {
+        stopSubtitles();
+      }
+    }
+
+    function stopSubtitles() {
+      if (recognition) {
+        isSubtitlesActive = false;
+        recognition.stop();
+      }
+      subBtn.textContent = "Activar";
+      subBtn.style.background = "#34c759";
+      subBox.textContent = "Subtítulos pausados.";
+    }
+
+    subLang.addEventListener("change", () => {
+      if (isSubtitlesActive && recognition) {
+        recognition.stop();
+        recognition.lang = subLang.value;
+        recognition.start();
+      }
+    });
+
+    // 5. Chat IA Gemini (gemini-3.8-flash)
     function getStoredApiKey() { return localStorage.getItem("gemini_user_api_key"); }
     function configureApiKey() {
       const currentKey = getStoredApiKey() || "";
@@ -428,7 +582,8 @@
       btn.disabled = true;
 
       const loadingMsg = appendMessage("Pensando...", "ai");
-      const context = `Estación: Orduña (Línea C3 Cercanías Bilbao). Hora actual: ${document.getElementById("current-clock").textContent}. Siguiente salida: ${document.getElementById("dep-live").textContent}. Siguiente llegada: ${document.getElementById("arr-live").textContent}. Emisora seleccionada: ${stationSelect.options[stationSelect.selectedIndex]?.text || "Ninguna"}. Retardo configurado: ${currentDelay} segundos. Usuario: ${text}`;
+      
+      const context = `Estación: Orduña (Línea C3 Cercanías Bilbao). Hora: ${document.getElementById("current-clock").textContent}. Siguiente salida oficial: ${document.getElementById("dep-official").textContent} (Tiempo real estimado: ${document.getElementById("dep-live").textContent}, Estado: ${document.getElementById("dep-status").textContent}). Siguiente llegada oficial: ${document.getElementById("arr-official").textContent} (Tiempo real estimado: ${document.getElementById("arr-live").textContent}, Estado: ${document.getElementById("arr-status").textContent}). Emisora: ${stationSelect.options[stationSelect.selectedIndex]?.text || "Ninguna"}. Retardo: ${currentDelay}s. Pregunta: ${text}`;
 
       try {
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
