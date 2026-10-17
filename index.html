@@ -264,7 +264,7 @@
   </div>
 
   <div id="chat-container">
-    <div class="bubble ai">¡Hola! He añadido las horas de salida y llegadas estimadas en texto para cada uno de los dos trenes.</div>
+    <div class="bubble ai">¡Hola! Monitor de Cercanías C-3, seguimiento sincronizado entre texto y mapa listo. ¿En qué te ayudo?</div>
   </div>
 
   <div id="input-area">
@@ -300,6 +300,7 @@
       "22:02", "22:32", "23:02", "23:35"
     ];
 
+    // Array de estaciones de Bilbao (min: 45) a Orduña (min: 0)
     const stations = [
       { name: "Bilbao Abando", lat: 43.2598, lon: -2.9272, min: 45 },
       { name: "Miribilla / La Peña", lat: 43.2480, lon: -2.9230, min: 41 },
@@ -369,19 +370,38 @@
       L.circleMarker([42.9970, -3.0110], { radius: 6, color: '#1e3a8a', fillColor: '#ffffff', fill: true }).addTo(map).bindPopup("<b>Orduña</b>");
     }
 
-    function getCoordsForMinute(minFromOrduna) {
+    // Devuelve tanto las coordenadas exactas como el texto del tramo correspondiente a "minFromOrduna"
+    // direction: "to_orduna" (sentido sur) o "to_bilbao" (sentido norte)
+    function getSectionAndCoords(minFromOrduna, direction) {
       const clamped = Math.max(0, Math.min(45, minFromOrduna));
+
       for (let i = 0; i < stations.length - 1; i++) {
-        const s1 = stations[i];
-        const s2 = stations[i+1];
-        if (clamped <= s1.min && clamped >= s2.min) {
-          const ratio = (clamped - s2.min) / (s1.min - s2.min);
-          const lat = s2.lat + ratio * (s1.lat - s2.lat);
-          const lon = s2.lon + ratio * (s1.lon - s2.lon);
-          return [lat, lon];
+        const sNorth = stations[i];   // Estación más al norte (mayor min)
+        const sSouth = stations[i+1]; // Estación más al sur (menor min)
+
+        if (clamped <= sNorth.min && clamped >= sSouth.min) {
+          const ratio = (clamped - sSouth.min) / (sNorth.min - sSouth.min);
+          const lat = sSouth.lat + ratio * (sNorth.lat - sSouth.lat);
+          const lon = sSouth.lon + ratio * (sNorth.lon - sSouth.lon);
+
+          let segmentText = "";
+          if (direction === "to_orduna") {
+            // El tren va de norte a sur: de sNorth a sSouth
+            segmentText = `${sNorth.name} ➔ ${sSouth.name}`;
+          } else {
+            // El tren va de sur a norte: de sSouth a sNorth
+            segmentText = `${sSouth.name} ➔ ${sNorth.name}`;
+          }
+
+          return { coords: [lat, lon], segment: segmentText };
         }
       }
-      return [stations[stations.length - 1].lat, stations[stations.length - 1].lon];
+
+      // Si está en Orduña (0)
+      return { 
+        coords: [stations[stations.length - 1].lat, stations[stations.length - 1].lon], 
+        segment: "Estación de Orduña" 
+      };
     }
 
     function updateLiveTrainInfo(currentMin, nextArrOfficial, lastDepOfficial) {
@@ -392,7 +412,6 @@
       const arrMinLive = arrMinOfficial + liveDelays.arr;
       const minUntilArr = arrMinLive - currentMin;
 
-      // El tren tarda 45 min entre Bilbao y Orduña
       const depFromBilbaoMin = arrMinOfficial - 45;
       const depFromBilbaoStr = minutesToTime(depFromBilbaoMin);
       const arrAtOrdunaStr = minutesToTime(arrMinLive);
@@ -406,19 +425,13 @@
       if (minUntilArr <= 0) {
         arrTextEl.textContent = "Ubicación: Entrando en andén en Orduña (Llegada inminente)";
         arrCoords = [42.9970, -3.0110];
-      } else if (minUntilArr > 45) {
-        arrTextEl.textContent = `Ubicación: En Bilbao Abando (llegará en ${minUntilArr} min)`;
+      } else if (minUntilArr >= 45) {
+        arrTextEl.textContent = `Ubicación: Saliendo de Bilbao Abando (llegará en ${minUntilArr} min)`;
         arrCoords = [43.2598, -2.9272];
       } else {
-        let seg = "Luiaondo ➔ Amurrio";
-        for (let i = 0; i < stations.length - 1; i++) {
-          if (minUntilArr <= stations[i].min && minUntilArr >= stations[i+1].min) {
-            seg = `${stations[i].name} ➔ ${stations[i+1].name}`;
-            break;
-          }
-        }
-        arrTextEl.textContent = `Ubicación: Entre ${seg} (en ${minUntilArr} min)`;
-        arrCoords = getCoordsForMinute(minUntilArr);
+        const info = getSectionAndCoords(minUntilArr, "to_orduna");
+        arrTextEl.textContent = `Ubicación: Entre ${info.segment} (llegará en ~${minUntilArr} min)`;
+        arrCoords = info.coords;
       }
 
       if (!greenMarker) {
@@ -445,23 +458,18 @@
         document.getElementById("train-dep-times").innerHTML = 
           `Salida Orduña: <b>${depFromOrdunaStr}</b> | Llegada estimada Bilbao: <b>${arrAtBilbaoStr}</b>`;
 
-        if (minSinceDep < 0) {
+        if (minSinceDep <= 0) {
           depTextEl.textContent = `Ubicación: En andén de Orduña (sale en ${Math.abs(minSinceDep)} min)`;
           depCoords = [42.9970, -3.0110];
-        } else if (minSinceDep > 50) {
-          depTextEl.textContent = `Ubicación: Llegado a Bilbao Abando (hace ${minSinceDep - 45} min)`;
+        } else if (minSinceDep >= 45) {
+          depTextEl.textContent = `Ubicación: Llegado a Bilbao Abando (destino final)`;
           depCoords = [43.2598, -2.9272];
         } else {
-          const equivRemaining = 45 - minSinceDep;
-          let depSeg = "Orduña ➔ Amurrio";
-          for (let i = 0; i < stations.length - 1; i++) {
-            if (equivRemaining <= stations[i].min && equivRemaining >= stations[i+1].min) {
-              depSeg = `${stations[i+1].name} ➔ ${stations[i].name}`;
-              break;
-            }
-          }
-          depTextEl.textContent = `Ubicación: Entre ${depSeg} (partió hace ${minSinceDep} min)`;
-          depCoords = getCoordsForMinute(minSinceDep);
+          // El tren lleva "minSinceDep" minutos alejándose desde Orduña (0 min)
+          // Obtenemos exactamente el tramo y las coordenadas correspondientes
+          const info = getSectionAndCoords(minSinceDep, "to_bilbao");
+          depTextEl.textContent = `Ubicación: Entre ${info.segment} (partió hace ${minSinceDep} min)`;
+          depCoords = info.coords;
         }
 
         if (!redMarker) {
