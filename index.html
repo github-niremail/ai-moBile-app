@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Orduña Móvil • Tren, Radio & IA</title>
+  <title>Orduña Móvil • Tren, Localización & IA</title>
 
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#007aff">
@@ -45,6 +45,47 @@
     .badge-delay { background: #ffebee; color: #c62828; }
     .badge-planned { background: #e3f2fd; color: #1565c0; }
     .badge-live-conn { background: #e0f2fe; color: #0284c7; }
+
+    /* Módulo Localización de Trenes Cercanos */
+    .tracking-card {
+      background: #fdfdfd;
+      border: 1px solid #e5e5ea;
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .track-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .track-icon {
+      font-size: 20px;
+      line-height: 1.2;
+    }
+    .track-info {
+      flex: 1;
+    }
+    .track-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: #6c757d;
+      text-transform: uppercase;
+    }
+    .track-loc {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1c1c1e;
+      margin-top: 1px;
+    }
+    .track-sub {
+      font-size: 11px;
+      color: #007aff;
+      font-weight: 500;
+    }
 
     /* Módulo Radio */
     .radio-controls { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
@@ -118,10 +159,10 @@
   </header>
 
   <div id="top-panels">
-    <!-- Panel Trenes Orduña (Conectado a Cloudflare Worker) -->
+    <!-- Panel Trenes Orduña -->
     <div class="app-card">
       <div class="card-header">
-        <span>🚆 C-3 ORDUÑA (TIEMPO REAL)</span>
+        <span>🚆 C-3 ORDUÑA (HORARIOS)</span>
         <div>
           <span id="worker-status" class="status-badge badge-live-conn">Worker Activo</span>
           <span id="current-clock" style="margin-left: 4px;">--:--</span>
@@ -155,6 +196,31 @@
           <div class="col-label">Estimado en vivo</div>
           <div class="col-val" id="arr-live">--:--</div>
           <span id="arr-status" class="status-badge badge-ontime">En hora</span>
+        </div>
+      </div>
+
+      <!-- SECCIÓN NUEVA: Localización de Trenes Cercanos (Acercándose y Alejándose) -->
+      <div class="tracking-card">
+        <!-- Tren Acercándose -->
+        <div class="track-item">
+          <div class="track-icon">🟢⬇️</div>
+          <div class="track-info">
+            <div class="track-title">Más cercano acercándose a Orduña</div>
+            <div class="track-loc" id="train-approaching-loc">Calculando posición...</div>
+            <div class="track-sub" id="train-approaching-sub">--</div>
+          </div>
+        </div>
+
+        <div style="height: 1px; background: #e5e5ea; margin: 2px 0;"></div>
+
+        <!-- Tren Alejándose -->
+        <div class="track-item">
+          <div class="track-icon">🔵⬆️</div>
+          <div class="track-info">
+            <div class="track-title">Último tren alejándose de Orduña</div>
+            <div class="track-loc" id="train-departing-loc">Calculando posición...</div>
+            <div class="track-sub" id="train-departing-sub">--</div>
+          </div>
         </div>
       </div>
     </div>
@@ -233,11 +299,11 @@
 
   <!-- Chat con Gemini -->
   <div id="chat-container">
-    <div class="bubble ai">¡Hola! He conectado la estación de Orduña a tu Cloudflare Worker en tiempo real. ¿En qué te ayudo hoy?</div>
+    <div class="bubble ai">¡Hola! He añadido el seguimiento de localización de trenes aproximándose y alejándose de Orduña.</div>
   </div>
 
   <div id="input-area">
-    <input type="text" id="userInput" placeholder="Pregunta sobre trenes, horarios..." autocomplete="off">
+    <input type="text" id="userInput" placeholder="Pregunta sobre la posición del tren..." autocomplete="off">
     <button id="sendBtn" onclick="sendMessage()">Enviar</button>
   </div>
 
@@ -266,6 +332,22 @@
       "22:02", "22:32", "23:02", "23:35"
     ];
 
+    // Tabla de estaciones de la línea C-3 con minutos medios antes de llegar a Orduña (40 km de trayecto)
+    // Bilbao Abando está a ~45 minutos de Orduña
+    const lineStations = [
+      { name: "Bilbao Abando", minBeforeOrduna: 45 },
+      { name: "Miribilla / La Peña", minBeforeOrduna: 41 },
+      { name: "Basauri / Arrigorriaga", minBeforeOrduna: 35 },
+      { name: "Ugao-Miraballes", minBeforeOrduna: 28 },
+      { name: "Arrankudiaga / Arakaldo", minBeforeOrduna: 22 },
+      { name: "Llodio (Laudio)", minBeforeOrduna: 16 },
+      { name: "Luiaondo", minBeforeOrduna: 12 },
+      { name: "Amurrio", minBeforeOrduna: 7 },
+      { name: "Iñarratxu", minBeforeOrduna: 4 },
+      { name: "Entrando en Orduña", minBeforeOrduna: 1 },
+      { name: "Estación de Orduña", minBeforeOrduna: 0 }
+    ];
+
     function timeToMinutes(str) {
       const [h, m] = str.split(":").map(Number);
       return h * 60 + m;
@@ -277,7 +359,6 @@
       return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     }
 
-    // Endpoint del Cloudflare Worker configurado
     const WORKER_URL = "https://cercanias-orduna-worker.tight-salad-67b5.workers.dev/";
     let liveDelays = { dep: 0, arr: 0 };
 
@@ -294,11 +375,72 @@
         badge.textContent = "Live OK";
         badge.className = "status-badge badge-ontime";
       } catch (err) {
-        console.warn("Fallo conectando con Cloudflare Worker:", err);
         badge.textContent = "Offline (Teórico)";
         badge.className = "status-badge badge-planned";
       }
       return liveDelays;
+    }
+
+    // Calcula la posición estimada del tren acercándose y alejándose
+    function updateTrainLocations(currentMin, nextArrOfficial, lastDepOfficial) {
+      // 1. TREN ACERCÁNDOSE (Procedente de Bilbao Abando hacia Orduña)
+      const arrMinLive = timeToMinutes(nextArrOfficial) + liveDelays.arr;
+      const minUntilArrival = arrMinLive - currentMin;
+
+      const appLocEl = document.getElementById("train-approaching-loc");
+      const appSubEl = document.getElementById("train-approaching-sub");
+
+      if (minUntilArrival <= 0) {
+        appLocEl.textContent = "Llegando a andén en Orduña";
+        appSubEl.textContent = "Llegada inminente";
+      } else if (minUntilArrival > 45) {
+        appLocEl.textContent = "En origen o saliendo de Bilbao Abando";
+        appSubEl.textContent = `Llegará a Orduña en ~${minUntilArrival} min`;
+      } else {
+        // Encontrar en qué tramo de estaciones se encuentra
+        let foundStation = lineStations[0].name;
+        for (let i = 0; i < lineStations.length - 1; i++) {
+          if (minUntilArrival <= lineStations[i].minBeforeOrduna && minUntilArrival >= lineStations[i+1].minBeforeOrduna) {
+            foundStation = `${lineStations[i].name} ➔ ${lineStations[i+1].name}`;
+            break;
+          }
+        }
+        appLocEl.textContent = foundStation;
+        appSubEl.textContent = `Aproximándose (llegada estimada en ${minUntilArrival} min)`;
+      }
+
+      // 2. TREN ALEJÁNDOSE (Salió de Orduña hacia Bilbao Abando)
+      const depLocEl = document.getElementById("train-departing-loc");
+      const depSubEl = document.getElementById("train-departing-sub");
+
+      if (!lastDepOfficial) {
+        depLocEl.textContent = "Sin salidas recientes";
+        depSubEl.textContent = "Esperando primera salida del día";
+      } else {
+        const depMinLive = timeToMinutes(lastDepOfficial) + liveDelays.dep;
+        const minSinceDeparture = currentMin - depMinLive;
+
+        if (minSinceDeparture < 0) {
+          depLocEl.textContent = "En andén de Orduña preparado";
+          depSubEl.textContent = `Salida prevista en ${Math.abs(minSinceDeparture)} min`;
+        } else if (minSinceDeparture > 50) {
+          depLocEl.textContent = "Llegado a Bilbao Abando (destino final)";
+          depSubEl.textContent = `Partió de Orduña hace ${minSinceDeparture} min`;
+        } else {
+          // El tren va avanzando alejándose hacia Bilbao
+          // Minutos que le faltan para llegar a Orduña si hiciera el camino inverso = 45 - minSinceDeparture
+          const equivalentRemaining = 45 - minSinceDeparture;
+          let departingPos = "Tramo Orduña - Amurrio";
+          for (let i = 0; i < lineStations.length - 1; i++) {
+            if (equivalentRemaining <= lineStations[i].minBeforeOrduna && equivalentRemaining >= lineStations[i+1].minBeforeOrduna) {
+              departingPos = `${lineStations[i+1].name} ➔ ${lineStations[i].name}`;
+              break;
+            }
+          }
+          depLocEl.textContent = departingPos;
+          depSubEl.textContent = `Alejándose hacia Bilbao (salió hace ${minSinceDeparture} min)`;
+        }
+      }
     }
 
     async function refreshLiveTimes() {
@@ -309,10 +451,14 @@
 
       await fetchRealTimeDelays();
 
-      // Próxima Salida (Orduña -> Bilbao)
-      const nextDep = departuresFromOrduna.find(t => timeToMinutes(t) >= currentMin) || departuresFromOrduna[0];
+      // Próxima Salida
+      const nextDepIndex = departuresFromOrduna.findIndex(t => timeToMinutes(t) >= currentMin);
+      const nextDep = nextDepIndex !== -1 ? departuresFromOrduna[nextDepIndex] : departuresFromOrduna[0];
       const depMinOfficial = timeToMinutes(nextDep);
       const depMinLive = depMinOfficial + liveDelays.dep;
+
+      // Última salida pasada (para el tren alejándose)
+      const lastDep = nextDepIndex > 0 ? departuresFromOrduna[nextDepIndex - 1] : (nextDepIndex === 0 ? null : departuresFromOrduna[departuresFromOrduna.length - 1]);
 
       document.getElementById("dep-official").textContent = nextDep;
       document.getElementById("dep-live").textContent = minutesToTime(depMinLive);
@@ -326,7 +472,7 @@
         depBadge.className = "status-badge badge-ontime";
       }
 
-      // Próxima Llegada (Bilbao -> Orduña)
+      // Próxima Llegada
       const nextArr = arrivalsAtOrduna.find(t => timeToMinutes(t) >= currentMin) || arrivalsAtOrduna[0];
       const arrMinOfficial = timeToMinutes(nextArr);
       const arrMinLive = arrMinOfficial + liveDelays.arr;
@@ -342,11 +488,13 @@
         arrBadge.textContent = "En hora";
         arrBadge.className = "status-badge badge-ontime";
       }
+
+      // Actualizar localizaciones en tiempo real
+      updateTrainLocations(currentMin, nextArr, lastDep);
     }
 
-    // Actualiza inmediatamente y cada 20 segundos
     refreshLiveTimes();
-    setInterval(refreshLiveTimes, 20000);
+    setInterval(refreshLiveTimes, 15000);
 
     // 3. Radio Streaming con Buffer Time-Shift
     const player = document.getElementById("audio-player");
@@ -583,7 +731,10 @@
 
       const loadingMsg = appendMessage("Pensando...", "ai");
       
-      const context = `Estación: Orduña (Línea C3 Cercanías Bilbao). Hora: ${document.getElementById("current-clock").textContent}. Siguiente salida oficial: ${document.getElementById("dep-official").textContent} (Tiempo real estimado: ${document.getElementById("dep-live").textContent}, Estado: ${document.getElementById("dep-status").textContent}). Siguiente llegada oficial: ${document.getElementById("arr-official").textContent} (Tiempo real estimado: ${document.getElementById("arr-live").textContent}, Estado: ${document.getElementById("arr-status").textContent}). Emisora: ${stationSelect.options[stationSelect.selectedIndex]?.text || "Ninguna"}. Retardo: ${currentDelay}s. Pregunta: ${text}`;
+      const appLoc = document.getElementById("train-approaching-loc").textContent;
+      const depLoc = document.getElementById("train-departing-loc").textContent;
+
+      const context = `Estación: Orduña (Línea C3 Cercanías Bilbao). Hora: ${document.getElementById("current-clock").textContent}. Siguiente salida oficial: ${document.getElementById("dep-official").textContent} (Tiempo real: ${document.getElementById("dep-live").textContent}). Siguiente llegada oficial: ${document.getElementById("arr-official").textContent} (Tiempo real: ${document.getElementById("arr-live").textContent}). Localización tren acercándose: ${appLoc}. Localización tren alejándose: ${depLoc}. Emisora: ${stationSelect.options[stationSelect.selectedIndex]?.text || "Ninguna"}. Retardo: ${currentDelay}s. Pregunta: ${text}`;
 
       try {
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
