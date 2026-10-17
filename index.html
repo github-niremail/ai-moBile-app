@@ -5,24 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Gemini AI Mobile</title>
 
-  <!-- Enlace al Manifest -->
-  <link rel="manifest" href="/manifest.json">
-
-  <!-- Configuración para Android / Chrome -->
+  <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#007aff">
-
-  <!-- Configuración para iOS / Safari -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="AI App">
-  <link rel="apple-touch-icon" href="/icon-512.png">
+  <link rel="apple-touch-icon" href="./icon-512.png">
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background-color: #f2f2f7; display: flex; flex-direction: column; height: 100dvh; }
     
-    header { background: #ffffff; padding: 16px; text-align: center; font-weight: 600; border-bottom: 1px solid #e5e5ea; }
-    
+    header { background: #ffffff; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e5ea; }
+    header span { font-weight: 600; font-size: 17px; }
+    .key-btn { background: none; border: none; font-size: 20px; cursor: pointer; }
+
     #chat-container { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
     
     .bubble { max-width: 80%; padding: 12px 16px; border-radius: 18px; font-size: 15px; line-height: 1.4; word-break: break-word; }
@@ -31,16 +27,19 @@
     
     #input-area { background: #ffffff; padding: 12px; display: flex; gap: 8px; border-top: 1px solid #e5e5ea; }
     input { flex: 1; padding: 12px; border: 1px solid #d1d1d6; border-radius: 20px; font-size: 16px; outline: none; }
-    button { background: #007aff; color: white; border: none; border-radius: 20px; padding: 0 18px; font-weight: 600; cursor: pointer; }
-    button:disabled { background: #a2a2a7; }
+    #sendBtn { background: #007aff; color: white; border: none; border-radius: 20px; padding: 0 18px; font-weight: 600; cursor: pointer; }
+    #sendBtn:disabled { background: #a2a2a7; }
   </style>
 </head>
 <body>
 
-  <header>Gemini PWA</header>
+  <header>
+    <span>Gemini PWA</span>
+    <button class="key-btn" onclick="configureApiKey()" title="Configurar API Key">⚙️</button>
+  </header>
 
   <div id="chat-container">
-    <div class="bubble ai">¡Hola! Soy tu asistente de bolsillo. ¿En qué te ayudo hoy?</div>
+    <div class="bubble ai">¡Hola! Pulsa el icono ⚙️ arriba para introducir tu API Key de Gemini y empezar a chatear.</div>
   </div>
 
   <div id="input-area">
@@ -49,19 +48,42 @@
   </div>
 
   <script>
-    // 1. Registro del Service Worker para funcionamiento PWA
+    // 1. Registro del Service Worker
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
-        navigator.serviceWorker.register("/sw.js")
-          .then((reg) => console.log("PWA Service Worker registrado con éxito:", reg.scope))
-          .catch((err) => console.error("Fallo al registrar Service Worker:", err));
+        navigator.serviceWorker.register("./sw.js")
+          .catch((err) => console.error("SW error:", err));
       });
     }
 
-    // 2. Lógica de la IA
-    const API_KEY = "TU_API_KEY_DE_GEMINI_AQUI";
+    // 2. Guardar y leer la API Key de forma local y segura en el móvil
+    function getStoredApiKey() {
+      return localStorage.getItem("gemini_user_api_key");
+    }
 
+    function configureApiKey() {
+      const currentKey = getStoredApiKey() || "";
+      const newKey = prompt("Introduce tu Gemini API Key (de Google AI Studio):", currentKey);
+      if (newKey !== null) {
+        if (newKey.trim() === "") {
+          localStorage.removeItem("gemini_user_api_key");
+          alert("API Key eliminada.");
+        } else {
+          localStorage.setItem("gemini_user_api_key", newKey.trim());
+          alert("API Key guardada correctamente en este dispositivo.");
+        }
+      }
+    }
+
+    // 3. Envío del mensaje
     async function sendMessage() {
+      let apiKey = getStoredApiKey();
+      if (!apiKey) {
+        configureApiKey();
+        apiKey = getStoredApiKey();
+        if (!apiKey) return;
+      }
+
       const input = document.getElementById("userInput");
       const btn = document.getElementById("sendBtn");
       const text = input.value.trim();
@@ -75,7 +97,7 @@
       const loadingMsg = appendMessage("Pensando...", "ai");
 
       try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -87,11 +109,13 @@
         
         if (data.candidates && data.candidates[0].content.parts[0].text) {
           loadingMsg.textContent = data.candidates[0].content.parts[0].text;
+        } else if (data.error) {
+          loadingMsg.textContent = "Error de API: " + data.error.message;
         } else {
-          loadingMsg.textContent = "Error: Respuesta vacía o clave de API no válida.";
+          loadingMsg.textContent = "Error: Respuesta no válida.";
         }
       } catch (err) {
-        loadingMsg.textContent = "Error al conectar con la IA. Comprueba tu conexión.";
+        loadingMsg.textContent = "Error de conexión. Revisa tu red.";
       } finally {
         btn.disabled = false;
       }
