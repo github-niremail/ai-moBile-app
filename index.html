@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Orduña Móvil • Tren, Localización & IA</title>
+  <title>Orduña Móvil • Tren, Radio & IA</title>
 
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#007aff">
@@ -127,15 +127,6 @@
       cursor: pointer;
     }
 
-    /* Subtítulos */
-    .subtitles-container {
-      margin-top: 10px;
-      background: #1c1c1e;
-      border-radius: 10px;
-      padding: 10px 12px;
-      color: #ffffff;
-    }
-
     /* Chat IA */
     #chat-container { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
     .bubble { max-width: 82%; padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.4; word-break: break-word; }
@@ -199,7 +190,7 @@
         </div>
       </div>
 
-      <!-- SECCIÓN NUEVA: Localización de Trenes Cercanos (Acercándose y Alejándose) -->
+      <!-- Localización de Trenes Cercanos -->
       <div class="tracking-card">
         <!-- Tren Acercándose -->
         <div class="track-item">
@@ -225,7 +216,7 @@
       </div>
     </div>
 
-    <!-- Panel Radio Streaming con Time-Shift & Subtítulos -->
+    <!-- Panel Radio Streaming con Time-Shift -->
     <div class="app-card">
       <div class="card-header">
         <span>📻 RADIOS EN STREAMING</span>
@@ -273,37 +264,17 @@
         </div>
       </div>
 
-      <!-- Caja de Subtítulos -->
-      <div class="subtitles-container">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-          <span style="font-size: 11px; font-weight: bold; text-transform: uppercase; color: #8e8e93;">💬 Subtítulos micrófono</span>
-          <div style="display: flex; gap: 6px; align-items: center;">
-            <select id="sub-lang" style="font-size: 11px; padding: 2px 6px; border-radius: 6px; background: #2c2c2e; color: white; border: 1px solid #3a3a3c;">
-              <option value="es-ES">Español</option>
-              <option value="en-GB">English (UK)</option>
-              <option value="eu-ES">Euskara</option>
-            </select>
-            <button id="sub-toggle-btn" onclick="toggleSubtitles()" style="font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 6px; border: none; background: #34c759; color: white; cursor: pointer;">
-              Activar
-            </button>
-          </div>
-        </div>
-        <div id="subtitles-box" style="height: 48px; overflow-y: auto; font-size: 12px; line-height: 1.4; color: #e5e5ea; font-style: italic; background: rgba(0,0,0,0.25); padding: 6px; border-radius: 6px;">
-          Pulsa «Activar» para transcribir el audio en directo...
-        </div>
-      </div>
-
       <audio id="audio-player" preload="none"></audio>
     </div>
   </div>
 
   <!-- Chat con Gemini -->
   <div id="chat-container">
-    <div class="bubble ai">¡Hola! He añadido el seguimiento de localización de trenes aproximándose y alejándose de Orduña.</div>
+    <div class="bubble ai">¡Hola! Monitor de Cercanías C-3, radio y asistente listos. ¿En qué puedo ayudarte?</div>
   </div>
 
   <div id="input-area">
-    <input type="text" id="userInput" placeholder="Pregunta sobre la posición del tren..." autocomplete="off">
+    <input type="text" id="userInput" placeholder="Pregunta sobre trenes, horarios..." autocomplete="off">
     <button id="sendBtn" onclick="sendMessage()">Enviar</button>
   </div>
 
@@ -332,8 +303,6 @@
       "22:02", "22:32", "23:02", "23:35"
     ];
 
-    // Tabla de estaciones de la línea C-3 con minutos medios antes de llegar a Orduña (40 km de trayecto)
-    // Bilbao Abando está a ~45 minutos de Orduña
     const lineStations = [
       { name: "Bilbao Abando", minBeforeOrduna: 45 },
       { name: "Miribilla / La Peña", minBeforeOrduna: 41 },
@@ -381,9 +350,8 @@
       return liveDelays;
     }
 
-    // Calcula la posición estimada del tren acercándose y alejándose
     function updateTrainLocations(currentMin, nextArrOfficial, lastDepOfficial) {
-      // 1. TREN ACERCÁNDOSE (Procedente de Bilbao Abando hacia Orduña)
+      // 1. TREN ACERCÁNDOSE
       const arrMinLive = timeToMinutes(nextArrOfficial) + liveDelays.arr;
       const minUntilArrival = arrMinLive - currentMin;
 
@@ -397,7 +365,6 @@
         appLocEl.textContent = "En origen o saliendo de Bilbao Abando";
         appSubEl.textContent = `Llegará a Orduña en ~${minUntilArrival} min`;
       } else {
-        // Encontrar en qué tramo de estaciones se encuentra
         let foundStation = lineStations[0].name;
         for (let i = 0; i < lineStations.length - 1; i++) {
           if (minUntilArrival <= lineStations[i].minBeforeOrduna && minUntilArrival >= lineStations[i+1].minBeforeOrduna) {
@@ -409,7 +376,7 @@
         appSubEl.textContent = `Aproximándose (llegada estimada en ${minUntilArrival} min)`;
       }
 
-      // 2. TREN ALEJÁNDOSE (Salió de Orduña hacia Bilbao Abando)
+      // 2. TREN ALEJÁNDOSE
       const depLocEl = document.getElementById("train-departing-loc");
       const depSubEl = document.getElementById("train-departing-sub");
 
@@ -427,8 +394,6 @@
           depLocEl.textContent = "Llegado a Bilbao Abando (destino final)";
           depSubEl.textContent = `Partió de Orduña hace ${minSinceDeparture} min`;
         } else {
-          // El tren va avanzando alejándose hacia Bilbao
-          // Minutos que le faltan para llegar a Orduña si hiciera el camino inverso = 45 - minSinceDeparture
           const equivalentRemaining = 45 - minSinceDeparture;
           let departingPos = "Tramo Orduña - Amurrio";
           for (let i = 0; i < lineStations.length - 1; i++) {
@@ -451,13 +416,11 @@
 
       await fetchRealTimeDelays();
 
-      // Próxima Salida
       const nextDepIndex = departuresFromOrduna.findIndex(t => timeToMinutes(t) >= currentMin);
       const nextDep = nextDepIndex !== -1 ? departuresFromOrduna[nextDepIndex] : departuresFromOrduna[0];
       const depMinOfficial = timeToMinutes(nextDep);
       const depMinLive = depMinOfficial + liveDelays.dep;
 
-      // Última salida pasada (para el tren alejándose)
       const lastDep = nextDepIndex > 0 ? departuresFromOrduna[nextDepIndex - 1] : (nextDepIndex === 0 ? null : departuresFromOrduna[departuresFromOrduna.length - 1]);
 
       document.getElementById("dep-official").textContent = nextDep;
@@ -472,7 +435,6 @@
         depBadge.className = "status-badge badge-ontime";
       }
 
-      // Próxima Llegada
       const nextArr = arrivalsAtOrduna.find(t => timeToMinutes(t) >= currentMin) || arrivalsAtOrduna[0];
       const arrMinOfficial = timeToMinutes(nextArr);
       const arrMinLive = arrMinOfficial + liveDelays.arr;
@@ -489,7 +451,6 @@
         arrBadge.className = "status-badge badge-ontime";
       }
 
-      // Actualizar localizaciones en tiempo real
       updateTrainLocations(currentMin, nextArr, lastDep);
     }
 
@@ -617,86 +578,7 @@
       delayValueLabel.textContent = "0 segundos (Directo)";
     });
 
-    // 4. Subtítulos mediante Reconocimiento de Voz
-    let recognition = null;
-    let isSubtitlesActive = false;
-    const subBox = document.getElementById("subtitles-box");
-    const subBtn = document.getElementById("sub-toggle-btn");
-    const subLang = document.getElementById("sub-lang");
-
-    function initSpeechRecognition() {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-        subBox.textContent = "Reconocimiento de voz no soportado por este navegador.";
-        subBtn.disabled = true;
-        return null;
-      }
-
-      const rec = new SpeechRecognition();
-      rec.continuous = true;
-      rec.interimResults = true;
-      rec.lang = subLang.value;
-
-      rec.onresult = (e) => {
-        let transcript = "";
-        for (let i = e.resultIndex; i < e.results.length; ++i) {
-          transcript += e.results[i][0].transcript;
-        }
-        subBox.textContent = transcript;
-        subBox.scrollTop = subBox.scrollHeight;
-      };
-
-      rec.onerror = (e) => {
-        if (e.error === "not-allowed") {
-          subBox.textContent = "Permiso de micrófono denegado.";
-          stopSubtitles();
-        }
-      };
-
-      rec.onend = () => {
-        if (isSubtitlesActive) rec.start();
-      };
-
-      return rec;
-    }
-
-    function toggleSubtitles() {
-      if (!recognition) recognition = initSpeechRecognition();
-      if (!recognition) return;
-
-      if (!isSubtitlesActive) {
-        try {
-          recognition.lang = subLang.value;
-          recognition.start();
-          isSubtitlesActive = true;
-          subBtn.textContent = "Detener";
-          subBtn.style.background = "#ff3b30";
-          subBox.textContent = "Escuchando audio...";
-        } catch (e) { console.error(e); }
-      } else {
-        stopSubtitles();
-      }
-    }
-
-    function stopSubtitles() {
-      if (recognition) {
-        isSubtitlesActive = false;
-        recognition.stop();
-      }
-      subBtn.textContent = "Activar";
-      subBtn.style.background = "#34c759";
-      subBox.textContent = "Subtítulos pausados.";
-    }
-
-    subLang.addEventListener("change", () => {
-      if (isSubtitlesActive && recognition) {
-        recognition.stop();
-        recognition.lang = subLang.value;
-        recognition.start();
-      }
-    });
-
-    // 5. Chat IA Gemini (gemini-3.8-flash)
+    // 4. Chat IA Gemini (gemini-3.8-flash)
     function getStoredApiKey() { return localStorage.getItem("gemini_user_api_key"); }
     function configureApiKey() {
       const currentKey = getStoredApiKey() || "";
