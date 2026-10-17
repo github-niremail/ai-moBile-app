@@ -49,7 +49,7 @@
     .badge-planned { background: #e3f2fd; color: #1565c0; }
     .badge-live-conn { background: #e0f2fe; color: #0284c7; }
 
-    /* Bloque informativo de texto */
+    /* Tarjeta de información en texto detallado */
     .tracking-card {
       background: #fdfdfd;
       border: 1px solid #e5e5ea;
@@ -58,14 +58,20 @@
       margin-top: 10px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 10px;
     }
     .track-item { display: flex; align-items: flex-start; gap: 10px; }
     .track-icon { font-size: 18px; line-height: 1.2; }
     .track-info { flex: 1; }
-    .track-title { font-size: 11px; font-weight: 700; color: #6c757d; text-transform: uppercase; }
-    .track-loc { font-size: 13px; font-weight: 600; color: #1c1c1e; margin-top: 1px; }
-    .track-sub { font-size: 11px; color: #007aff; font-weight: 500; }
+    .track-title { font-size: 12px; font-weight: 700; text-transform: uppercase; }
+    .track-times {
+      font-size: 12px;
+      font-weight: 600;
+      color: #333333;
+      margin-top: 2px;
+      line-height: 1.4;
+    }
+    .track-loc { font-size: 12px; color: #007aff; font-weight: 600; margin-top: 2px; }
 
     /* Contenedor del mapa Leaflet */
     #train-map {
@@ -136,7 +142,7 @@
     <!-- Panel Trenes Orduña -->
     <div class="app-card">
       <div class="card-header">
-        <span>🚆 C-3 ORDUÑA (HORARIOS & MAPA)</span>
+        <span>🚆 C-3 ORDUÑA (HORARIOS & SEGUIMIENTO)</span>
         <div>
           <span id="worker-status" class="status-badge badge-live-conn">Worker Activo</span>
           <span id="current-clock" style="margin-left: 4px;">--:--</span>
@@ -144,7 +150,7 @@
       </div>
 
       <!-- Salida a Bilbao -->
-      <div style="font-size:11px; font-weight:bold; color:#555; margin-top:2px;">SALIDA A BILBAO ABANDO</div>
+      <div style="font-size:11px; font-weight:bold; color:#555; margin-top:2px;">PRÓXIMA SALIDA A BILBAO ABANDO</div>
       <div class="service-row">
         <div class="col-time">
           <div class="col-label">Oficial Renfe</div>
@@ -159,7 +165,7 @@
       </div>
 
       <!-- Llegada de Bilbao -->
-      <div style="font-size:11px; font-weight:bold; color:#555; margin-top:6px;">LLEGADA DESDE BILBAO</div>
+      <div style="font-size:11px; font-weight:bold; color:#555; margin-top:6px;">PRÓXIMA LLEGADA DESDE BILBAO</div>
       <div class="service-row">
         <div class="col-time">
           <div class="col-label">Oficial Renfe</div>
@@ -180,8 +186,10 @@
           <div class="track-icon">🟢</div>
           <div class="track-info">
             <div class="track-title" style="color: #15803d;">Tren más próximo LLEGANDO a Orduña</div>
+            <div class="track-times" id="train-arr-times">
+              Salida Bilbao: <b>--:--</b> | Llegada estimada Orduña: <b>--:--</b>
+            </div>
             <div class="track-loc" id="train-arr-text">Calculando tramo...</div>
-            <div class="track-sub" id="train-arr-sub">--</div>
           </div>
         </div>
 
@@ -192,8 +200,10 @@
           <div class="track-icon">🔴</div>
           <div class="track-info">
             <div class="track-title" style="color: #b91c1c;">Tren más próximo ALEJÁNDOSE de Orduña</div>
+            <div class="track-times" id="train-dep-times">
+              Salida Orduña: <b>--:--</b> | Llegada estimada Bilbao: <b>--:--</b>
+            </div>
             <div class="track-loc" id="train-dep-text">Calculando tramo...</div>
-            <div class="track-sub" id="train-dep-sub">--</div>
           </div>
         </div>
       </div>
@@ -254,7 +264,7 @@
   </div>
 
   <div id="chat-container">
-    <div class="bubble ai">¡Hola! He actualizado la información en texto de los dos trenes y el mapa con el círculo verde para la llegada y el rojo para la salida.</div>
+    <div class="bubble ai">¡Hola! He añadido las horas de salida y llegadas estimadas en texto para cada uno de los dos trenes.</div>
   </div>
 
   <div id="input-area">
@@ -309,8 +319,10 @@
     }
 
     function minutesToTime(totalMin) {
-      const h = Math.floor(totalMin / 60) % 24;
-      const m = totalMin % 60;
+      let norm = totalMin % (24 * 60);
+      if (norm < 0) norm += 24 * 60;
+      const h = Math.floor(norm / 60);
+      const m = norm % 60;
       return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     }
 
@@ -376,19 +388,26 @@
       if (!map) initMap();
 
       // 1. TREN LLEGANDO A ORDUÑA (VERDE 🟢)
-      const arrMinLive = timeToMinutes(nextArrOfficial) + liveDelays.arr;
+      const arrMinOfficial = timeToMinutes(nextArrOfficial);
+      const arrMinLive = arrMinOfficial + liveDelays.arr;
       const minUntilArr = arrMinLive - currentMin;
-      const arrTextEl = document.getElementById("train-arr-text");
-      const arrSubEl = document.getElementById("train-arr-sub");
 
+      // El tren tarda 45 min entre Bilbao y Orduña
+      const depFromBilbaoMin = arrMinOfficial - 45;
+      const depFromBilbaoStr = minutesToTime(depFromBilbaoMin);
+      const arrAtOrdunaStr = minutesToTime(arrMinLive);
+
+      document.getElementById("train-arr-times").innerHTML = 
+        `Salida Bilbao: <b>${depFromBilbaoStr}</b> | Llegada estimada Orduña: <b>${arrAtOrdunaStr}</b>`;
+
+      const arrTextEl = document.getElementById("train-arr-text");
       let arrCoords = [42.9970, -3.0110];
+
       if (minUntilArr <= 0) {
-        arrTextEl.textContent = "Entrando en andén (Estación de Orduña)";
-        arrSubEl.textContent = "Llegada inminente";
+        arrTextEl.textContent = "Ubicación: Entrando en andén en Orduña (Llegada inminente)";
         arrCoords = [42.9970, -3.0110];
       } else if (minUntilArr > 45) {
-        arrTextEl.textContent = "Bilbao Abando ➔ Miribilla";
-        arrSubEl.textContent = `En origen / salida (llegará en ${minUntilArr} min)`;
+        arrTextEl.textContent = `Ubicación: En Bilbao Abando (llegará en ${minUntilArr} min)`;
         arrCoords = [43.2598, -2.9272];
       } else {
         let seg = "Luiaondo ➔ Amurrio";
@@ -398,8 +417,7 @@
             break;
           }
         }
-        arrTextEl.textContent = seg;
-        arrSubEl.textContent = `Aproximándose (llegará a Orduña en ~${minUntilArr} min)`;
+        arrTextEl.textContent = `Ubicación: Entre ${seg} (en ${minUntilArr} min)`;
         arrCoords = getCoordsForMinute(minUntilArr);
       }
 
@@ -408,27 +426,30 @@
       } else {
         greenMarker.setLatLng(arrCoords);
       }
-      greenMarker.bindPopup(`<b>🟢 Tren llegando a Orduña</b><br>Tramo: ${arrTextEl.textContent}<br>${arrSubEl.textContent}`);
+      greenMarker.bindPopup(`<b>🟢 Tren llegando a Orduña</b><br>Salida Bilbao: ${depFromBilbaoStr}<br>Llegada Orduña: ${arrAtOrdunaStr}<br>${arrTextEl.textContent}`);
 
       // 2. TREN ALEJÁNDOSE DE ORDUÑA (ROJO 🔴)
       const depTextEl = document.getElementById("train-dep-text");
-      const depSubEl = document.getElementById("train-dep-sub");
-
       let depCoords = [42.9970, -3.0110];
+
       if (!lastDepOfficial) {
-        depTextEl.textContent = "Sin salidas recientes";
-        depSubEl.textContent = "Esperando primer servicio";
+        document.getElementById("train-dep-times").innerHTML = "Sin salidas recientes";
+        depTextEl.textContent = "Esperando primer servicio del día";
       } else {
-        const depMinLive = timeToMinutes(lastDepOfficial) + liveDelays.dep;
-        const minSinceDep = currentMin - depMinLive;
+        const depFromOrdunaMin = timeToMinutes(lastDepOfficial) + liveDelays.dep;
+        const depFromOrdunaStr = minutesToTime(depFromOrdunaMin);
+        const arrAtBilbaoMin = depFromOrdunaMin + 45;
+        const arrAtBilbaoStr = minutesToTime(arrAtBilbaoMin);
+        const minSinceDep = currentMin - depFromOrdunaMin;
+
+        document.getElementById("train-dep-times").innerHTML = 
+          `Salida Orduña: <b>${depFromOrdunaStr}</b> | Llegada estimada Bilbao: <b>${arrAtBilbaoStr}</b>`;
 
         if (minSinceDep < 0) {
-          depTextEl.textContent = "En andén de Orduña";
-          depSubEl.textContent = `Salida prevista en ${Math.abs(minSinceDep)} min`;
+          depTextEl.textContent = `Ubicación: En andén de Orduña (sale en ${Math.abs(minSinceDep)} min)`;
           depCoords = [42.9970, -3.0110];
         } else if (minSinceDep > 50) {
-          depTextEl.textContent = "Llegado a Bilbao Abando (destino final)";
-          depSubEl.textContent = `Partió hace ${minSinceDep} min`;
+          depTextEl.textContent = `Ubicación: Llegado a Bilbao Abando (hace ${minSinceDep - 45} min)`;
           depCoords = [43.2598, -2.9272];
         } else {
           const equivRemaining = 45 - minSinceDep;
@@ -439,18 +460,17 @@
               break;
             }
           }
-          depTextEl.textContent = depSeg;
-          depSubEl.textContent = `Alejándose hacia Bilbao (partió hace ${minSinceDep} min)`;
+          depTextEl.textContent = `Ubicación: Entre ${depSeg} (partió hace ${minSinceDep} min)`;
           depCoords = getCoordsForMinute(minSinceDep);
         }
-      }
 
-      if (!redMarker) {
-        redMarker = L.circleMarker(depCoords, { radius: 10, color: '#7f1d1d', fillColor: '#ef4444', fillOpacity: 0.95 }).addTo(map);
-      } else {
-        redMarker.setLatLng(depCoords);
+        if (!redMarker) {
+          redMarker = L.circleMarker(depCoords, { radius: 10, color: '#7f1d1d', fillColor: '#ef4444', fillOpacity: 0.95 }).addTo(map);
+        } else {
+          redMarker.setLatLng(depCoords);
+        }
+        redMarker.bindPopup(`<b>🔴 Tren alejándose de Orduña</b><br>Salida Orduña: ${depFromOrdunaStr}<br>Llegada Bilbao: ${arrAtBilbaoStr}<br>${depTextEl.textContent}`);
       }
-      redMarker.bindPopup(`<b>🔴 Tren alejándose de Orduña</b><br>Tramo: ${depTextEl.textContent}<br>${depSubEl.textContent}`);
 
       setTimeout(() => map.invalidateSize(), 200);
     }
@@ -660,10 +680,12 @@
 
       const loadingMsg = appendMessage("Pensando...", "ai");
       
+      const arrTimes = document.getElementById("train-arr-times").textContent;
       const arrLoc = document.getElementById("train-arr-text").textContent;
+      const depTimes = document.getElementById("train-dep-times").textContent;
       const depLoc = document.getElementById("train-dep-text").textContent;
 
-      const context = `Estación: Orduña (Línea C3 Cercanías Bilbao). Hora: ${document.getElementById("current-clock").textContent}. Siguiente salida oficial: ${document.getElementById("dep-official").textContent} (Tiempo real: ${document.getElementById("dep-live").textContent}). Siguiente llegada oficial: ${document.getElementById("arr-official").textContent} (Tiempo real: ${document.getElementById("arr-live").textContent}). Tren llegando (verde): ${arrLoc}. Tren alejándose (rojo): ${depLoc}. Emisora: ${stationSelect.options[stationSelect.selectedIndex]?.text || "Ninguna"}. Retardo: ${currentDelay}s. Pregunta: ${text}`;
+      const context = `Estación: Orduña (Línea C3 Cercanías Bilbao). Hora: ${document.getElementById("current-clock").textContent}. Siguiente salida oficial: ${document.getElementById("dep-official").textContent} (Tiempo real: ${document.getElementById("dep-live").textContent}). Siguiente llegada oficial: ${document.getElementById("arr-official").textContent} (Tiempo real: ${document.getElementById("arr-live").textContent}). Tren llegando (verde): ${arrTimes}, ${arrLoc}. Tren alejándose (rojo): ${depTimes}, ${depLoc}. Emisora: ${stationSelect.options[stationSelect.selectedIndex]?.text || "Ninguna"}. Retardo: ${currentDelay}s. Pregunta: ${text}`;
 
       try {
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
