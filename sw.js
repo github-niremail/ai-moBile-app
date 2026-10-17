@@ -1,4 +1,4 @@
-const CACHE_NAME = "gemini-pwa-v1";
+const CACHE_NAME = "gemini-pwa-v3";
 const ASSETS_TO_CACHE = [
   "/",
   "/index.html",
