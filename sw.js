@@ -1,4 +1,4 @@
-const CACHE_NAME = "gemini-pwa-v7";
+const CACHE_NAME = "gemini-pwa-v16"; // Change to a new version, e.g., v17 or radio-v1
 const ASSETS_TO_CACHE = [
   "/",
   "/index.html",
