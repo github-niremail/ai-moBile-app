@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Orduña Móvil • Tren, Mapa & IA</title>
+  <title>Radio Player • Time-Shift</title>
 
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#007aff">
@@ -11,93 +11,109 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="apple-touch-icon" href="./icon-512.png">
 
-  <!-- Hoja de estilos del mapa Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: #f2f2f7; display: flex; flex-direction: column; height: 100dvh; }
+    body { 
+      background-color: #f2f2f7; 
+      display: flex; 
+      flex-direction: column; 
+      min-height: 100dvh; 
+    }
     
-    header { background: #ffffff; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e5ea; }
-    header span { font-weight: 600; font-size: 16px; }
-    .header-btns { display: flex; gap: 8px; }
-    .btn-icon { background: none; border: none; font-size: 18px; cursor: pointer; }
+    header { 
+      background: #ffffff; 
+      padding: 14px 16px; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      border-bottom: 1px solid #e5e5ea; 
+      position: sticky; 
+      top: 0; 
+      z-index: 10; 
+    }
+    header span { 
+      font-weight: 700; 
+      font-size: 17px; 
+      color: #1c1c1e; 
+    }
 
-    #top-panels {
+    #main-container {
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      padding: 10px 14px 0 14px;
+      gap: 14px;
+      padding: 16px 14px;
+      flex: 1;
+      max-width: 600px;
+      margin: 0 auto;
+      width: 100%;
     }
 
     .app-card {
       background: #ffffff;
-      padding: 12px 14px;
+      padding: 16px;
       border-radius: 14px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     }
 
-    .card-header { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #8e8e93; font-weight: bold; margin-bottom: 8px; }
-
-    .service-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
-    .col-time { background: #f8f9fa; padding: 6px 8px; border-radius: 8px; border: 1px solid #e5e5ea; text-align: center; }
-    .col-label { font-size: 10px; text-transform: uppercase; color: #8e8e93; font-weight: bold; }
-    .col-val { font-size: 16px; font-weight: bold; color: #1c1c1e; }
-    .status-badge { font-size: 10px; font-weight: bold; padding: 2px 5px; border-radius: 4px; display: inline-block; margin-top: 2px; }
-    .badge-ontime { background: #e8f5e9; color: #2e7d32; }
-    .badge-delay { background: #ffebee; color: #c62828; }
-    .badge-planned { background: #e3f2fd; color: #1565c0; }
-    .badge-live-conn { background: #e0f2fe; color: #0284c7; }
-
-    /* Tarjeta de información en texto detallado */
-    .tracking-card {
-      background: #fdfdfd;
-      border: 1px solid #e5e5ea;
-      border-radius: 10px;
-      padding: 10px 12px;
-      margin-top: 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .track-item { display: flex; align-items: flex-start; gap: 10px; }
-    .track-icon { font-size: 18px; line-height: 1.2; }
-    .track-info { flex: 1; }
-    .track-title { font-size: 12px; font-weight: 700; text-transform: uppercase; }
-    .track-times {
-      font-size: 12px;
-      font-weight: 600;
-      color: #333333;
-      margin-top: 2px;
-      line-height: 1.4;
-    }
-    .track-loc { font-size: 12px; color: #007aff; font-weight: 600; margin-top: 2px; }
-
-    /* Contenedor del mapa Leaflet */
-    #train-map {
-      height: 220px;
-      width: 100%;
-      border-radius: 10px;
-      margin-top: 10px;
-      border: 1px solid #e5e5ea;
-      z-index: 1;
+    .card-header { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      font-size: 13px; 
+      color: #8e8e93; 
+      font-weight: bold; 
+      margin-bottom: 14px; 
     }
 
-    /* Módulo Radio */
-    .radio-controls { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
-    select { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid #d1d1d6; font-size: 14px; background: #f8f9fa; outline: none; }
-    .radio-btn { background: #007aff; color: white; border: none; border-radius: 10px; padding: 10px 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .radio-controls { 
+      display: flex; 
+      gap: 10px; 
+      align-items: center; 
+      margin-bottom: 16px; 
+    }
+
+    select { 
+      flex: 1; 
+      padding: 12px; 
+      border-radius: 10px; 
+      border: 1px solid #d1d1d6; 
+      font-size: 15px; 
+      background: #f8f9fa; 
+      outline: none; 
+    }
+
+    .radio-btn { 
+      background: #007aff; 
+      color: white; 
+      border: none; 
+      border-radius: 10px; 
+      padding: 12px 18px; 
+      font-weight: 600; 
+      font-size: 15px; 
+      cursor: pointer; 
+      white-space: nowrap; 
+      transition: background 0.2s ease;
+    }
 
     .delay-container {
       background: #f8f9fa;
       border: 1px solid #e5e5ea;
-      border-radius: 10px;
-      padding: 10px 12px;
+      border-radius: 12px;
+      padding: 14px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 10px;
     }
-    .delay-header { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600; color: #333; }
+
+    .delay-header { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      font-size: 13px; 
+      font-weight: 600; 
+      color: #333; 
+    }
+
     .delay-slider {
       width: 100%;
       height: 6px;
@@ -106,116 +122,35 @@
       outline: none;
       -webkit-appearance: none;
     }
+
     .delay-slider::-webkit-slider-thumb {
       -webkit-appearance: none;
       appearance: none;
-      width: 20px;
-      height: 20px;
+      width: 24px;
+      height: 24px;
       border-radius: 50%;
       background: #007aff;
       cursor: pointer;
     }
 
-    /* Chat IA */
-    #chat-container { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
-    .bubble { max-width: 82%; padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.4; word-break: break-word; }
-    .user { align-self: flex-end; background-color: #007aff; color: white; border-bottom-right-radius: 4px; }
-    .ai { align-self: flex-start; background-color: #e5e5ea; color: black; border-bottom-left-radius: 4px; }
-    
-    #input-area { background: #ffffff; padding: 10px 14px; display: flex; gap: 8px; border-top: 1px solid #e5e5ea; }
-    input[type="text"] { flex: 1; padding: 10px 14px; border: 1px solid #d1d1d6; border-radius: 20px; font-size: 15px; outline: none; }
-    #sendBtn { background: #007aff; color: white; border: none; border-radius: 20px; padding: 0 16px; font-weight: 600; cursor: pointer; }
-    #sendBtn:disabled { background: #a2a2a7; }
+    .delay-scale {
+      display: flex; 
+      justify-content: space-between; 
+      font-size: 11px; 
+      color: #8e8e93; 
+    }
   </style>
 </head>
 <body>
 
   <header>
-    <span>Orduña Móvil • Asistente</span>
-    <div class="header-btns">
-      <button class="btn-icon" onclick="refreshLiveTimes()" title="Refrescar trenes">🔄</button>
-      <button class="btn-icon" onclick="configureApiKey()" title="Configuración">⚙️</button>
-    </div>
+    <span>Radio Streaming • Time-Shift</span>
   </header>
 
-  <div id="top-panels">
-    <!-- Panel Trenes Orduña -->
+  <div id="main-container">
     <div class="app-card">
       <div class="card-header">
-        <span>🚆 C-3 ORDUÑA (HORARIOS & SEGUIMIENTO)</span>
-        <div>
-          <span id="worker-status" class="status-badge badge-live-conn">Worker Activo</span>
-          <span id="current-clock" style="margin-left: 4px;">--:--</span>
-        </div>
-      </div>
-
-      <!-- Salida a Bilbao -->
-      <div style="font-size:11px; font-weight:bold; color:#555; margin-top:2px;">PRÓXIMA SALIDA A BILBAO ABANDO</div>
-      <div class="service-row">
-        <div class="col-time">
-          <div class="col-label">Oficial Renfe</div>
-          <div class="col-val" id="dep-official">--:--</div>
-          <span class="status-badge badge-planned">Programado</span>
-        </div>
-        <div class="col-time">
-          <div class="col-label">Estimado en vivo</div>
-          <div class="col-val" id="dep-live">--:--</div>
-          <span id="dep-status" class="status-badge badge-ontime">En hora</span>
-        </div>
-      </div>
-
-      <!-- Llegada de Bilbao -->
-      <div style="font-size:11px; font-weight:bold; color:#555; margin-top:6px;">PRÓXIMA LLEGADA DESDE BILBAO</div>
-      <div class="service-row">
-        <div class="col-time">
-          <div class="col-label">Oficial Renfe</div>
-          <div class="col-val" id="arr-official">--:--</div>
-          <span class="status-badge badge-planned">Programado</span>
-        </div>
-        <div class="col-time">
-          <div class="col-label">Estimado en vivo</div>
-          <div class="col-val" id="arr-live">--:--</div>
-          <span id="arr-status" class="status-badge badge-ontime">En hora</span>
-        </div>
-      </div>
-
-      <!-- Información en Texto de ambos trenes -->
-      <div class="tracking-card">
-        <!-- Tren Llegando (Verde) -->
-        <div class="track-item">
-          <div class="track-icon">🟢</div>
-          <div class="track-info">
-            <div class="track-title" style="color: #15803d;">Tren más próximo LLEGANDO a Orduña</div>
-            <div class="track-times" id="train-arr-times">
-              Salida Bilbao: <b>--:--</b> | Llegada estimada Orduña: <b>--:--</b>
-            </div>
-            <div class="track-loc" id="train-arr-text">Calculando tramo...</div>
-          </div>
-        </div>
-
-        <div style="height: 1px; background: #e5e5ea; margin: 2px 0;"></div>
-
-        <!-- Tren Alejándose (Rojo) -->
-        <div class="track-item">
-          <div class="track-icon">🔴</div>
-          <div class="track-info">
-            <div class="track-title" style="color: #b91c1c;">Tren más próximo ALEJÁNDOSE de Orduña</div>
-            <div class="track-times" id="train-dep-times">
-              Salida Orduña: <b>--:--</b> | Llegada estimada Bilbao: <b>--:--</b>
-            </div>
-            <div class="track-loc" id="train-dep-text">Calculando tramo...</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Mapa Interactivo Leaflet -->
-      <div id="train-map"></div>
-    </div>
-
-    <!-- Panel Radio Streaming con Time-Shift -->
-    <div class="app-card">
-      <div class="card-header">
-        <span>📻 RADIOS EN STREAMING</span>
+        <span>📻 EMISORAS DISPONIBLES</span>
         <span id="radio-status" style="color:#007aff;">Detenido</span>
       </div>
       
@@ -237,6 +172,7 @@
         <button id="radio-btn" class="radio-btn" onclick="togglePlayRadio()">▶ Oír</button>
       </div>
 
+      <!-- Time-Shift buffer control (0 to 120 seconds) -->
       <div class="delay-container">
         <div class="delay-header">
           <span>⏱️ Retardo de audio:</span>
@@ -252,7 +188,7 @@
           step="1" 
           oninput="handleDelayInput(this.value)"
         >
-        <div style="display:flex; justify-content:space-between; font-size:10px; color:#8e8e93;">
+        <div class="delay-scale">
           <span>0s (Directo)</span>
           <span>60s</span>
           <span>120s (2 min)</span>
@@ -263,276 +199,15 @@
     </div>
   </div>
 
-  <div id="chat-container">
-    <div class="bubble ai">¡Hola! Monitor de Cercanías C-3, seguimiento sincronizado entre texto y mapa listo. ¿En qué te ayudo?</div>
-  </div>
-
-  <div id="input-area">
-    <input type="text" id="userInput" placeholder="Pregunta sobre la ubicación de los trenes..." autocomplete="off">
-    <button id="sendBtn" onclick="sendMessage()">Enviar</button>
-  </div>
-
-  <!-- Librería Leaflet -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
   <script>
-    // 1. Service Worker
+    // 1. Service Worker registration for offline PWA shell
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
         navigator.serviceWorker.register("./sw.js").catch(console.error);
       });
     }
 
-    // 2. Horarios Renfe C3 Orduña
-    const departuresFromOrduna = [
-      "05:01", "05:31", "06:12", "06:34", "07:01", "07:29", "08:01", "08:31",
-      "09:01", "09:31", "10:01", "10:31", "10:58", "11:30", "12:01", "12:31",
-      "13:04", "13:31", "13:59", "14:34", "15:06", "15:33", "16:01", "16:31",
-      "17:01", "17:31", "18:01", "18:31", "19:01", "19:31", "20:01", "20:31",
-      "21:01", "21:31", "22:01", "22:31"
-    ];
-
-    const arrivalsAtOrduna = [
-      "06:00", "06:32", "07:02", "07:35", "08:02", "08:32", "09:02", "09:32",
-      "10:02", "10:32", "11:02", "11:32", "12:00", "12:31", "13:02", "13:32",
-      "14:05", "14:32", "15:00", "15:35", "16:07", "16:32", "17:02", "17:32",
-      "18:02", "18:32", "19:02", "19:32", "20:02", "20:32", "21:02", "21:32",
-      "22:02", "22:32", "23:02", "23:35"
-    ];
-
-    // Array de estaciones de Bilbao (min: 45) a Orduña (min: 0)
-    const stations = [
-      { name: "Bilbao Abando", lat: 43.2598, lon: -2.9272, min: 45 },
-      { name: "Miribilla / La Peña", lat: 43.2480, lon: -2.9230, min: 41 },
-      { name: "Ollargan / Arrigorriaga", lat: 43.2050, lon: -2.8880, min: 35 },
-      { name: "Ugao-Miraballes", lat: 43.1810, lon: -2.9010, min: 28 },
-      { name: "Arrankudiaga / Arakaldo", lat: 43.1600, lon: -2.9190, min: 22 },
-      { name: "Llodio (Laudio)", lat: 43.1430, lon: -2.9610, min: 16 },
-      { name: "Luiaondo", lat: 43.0850, lon: -3.0040, min: 12 },
-      { name: "Amurrio", lat: 43.0530, lon: -3.0010, min: 7 },
-      { name: "Iñarratxu", lat: 43.0200, lon: -3.0080, min: 4 },
-      { name: "Orduña (Urduña)", lat: 42.9970, lon: -3.0110, min: 0 }
-    ];
-
-    function timeToMinutes(str) {
-      const [h, m] = str.split(":").map(Number);
-      return h * 60 + m;
-    }
-
-    function minutesToTime(totalMin) {
-      let norm = totalMin % (24 * 60);
-      if (norm < 0) norm += 24 * 60;
-      const h = Math.floor(norm / 60);
-      const m = norm % 60;
-      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-    }
-
-    const WORKER_URL = "https://cercanias-orduna-worker.tight-salad-67b5.workers.dev/";
-    let liveDelays = { dep: 0, arr: 0 };
-
-    async function fetchRealTimeDelays() {
-      const badge = document.getElementById("worker-status");
-      try {
-        const response = await fetch(WORKER_URL, { cache: "no-store" });
-        if (!response.ok) throw new Error("HTTP " + response.status);
-        const data = await response.json();
-        liveDelays.dep = typeof data.depDelayMinutes === "number" ? data.depDelayMinutes : 0;
-        liveDelays.arr = typeof data.arrDelayMinutes === "number" ? data.arrDelayMinutes : 0;
-        badge.textContent = "Live OK";
-        badge.className = "status-badge badge-ontime";
-      } catch (err) {
-        badge.textContent = "Offline (Teórico)";
-        badge.className = "status-badge badge-planned";
-      }
-      return liveDelays;
-    }
-
-    // Inicialización del Mapa Leaflet
-    let map = null;
-    let greenMarker = null; // Tren llegando
-    let redMarker = null;   // Tren alejándose
-
-    function initMap() {
-      if (map) return;
-      map = L.map('train-map').setView([43.13, -2.96], 10);
-
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap',
-        maxZoom: 14
-      }).addTo(map);
-
-      // Línea de tren C-3
-      const latlngs = stations.map(s => [s.lat, s.lon]);
-      L.polyline(latlngs, { color: '#0284c7', weight: 4 }).addTo(map);
-
-      // Estaciones cabecera
-      L.circleMarker([43.2598, -2.9272], { radius: 6, color: '#1e3a8a', fillColor: '#ffffff', fill: true }).addTo(map).bindPopup("<b>Bilbao Abando</b>");
-      L.circleMarker([42.9970, -3.0110], { radius: 6, color: '#1e3a8a', fillColor: '#ffffff', fill: true }).addTo(map).bindPopup("<b>Orduña</b>");
-    }
-
-    // Devuelve tanto las coordenadas exactas como el texto del tramo correspondiente a "minFromOrduna"
-    // direction: "to_orduna" (sentido sur) o "to_bilbao" (sentido norte)
-    function getSectionAndCoords(minFromOrduna, direction) {
-      const clamped = Math.max(0, Math.min(45, minFromOrduna));
-
-      for (let i = 0; i < stations.length - 1; i++) {
-        const sNorth = stations[i];   // Estación más al norte (mayor min)
-        const sSouth = stations[i+1]; // Estación más al sur (menor min)
-
-        if (clamped <= sNorth.min && clamped >= sSouth.min) {
-          const ratio = (clamped - sSouth.min) / (sNorth.min - sSouth.min);
-          const lat = sSouth.lat + ratio * (sNorth.lat - sSouth.lat);
-          const lon = sSouth.lon + ratio * (sNorth.lon - sSouth.lon);
-
-          let segmentText = "";
-          if (direction === "to_orduna") {
-            // El tren va de norte a sur: de sNorth a sSouth
-            segmentText = `${sNorth.name} ➔ ${sSouth.name}`;
-          } else {
-            // El tren va de sur a norte: de sSouth a sNorth
-            segmentText = `${sSouth.name} ➔ ${sNorth.name}`;
-          }
-
-          return { coords: [lat, lon], segment: segmentText };
-        }
-      }
-
-      // Si está en Orduña (0)
-      return { 
-        coords: [stations[stations.length - 1].lat, stations[stations.length - 1].lon], 
-        segment: "Estación de Orduña" 
-      };
-    }
-
-    function updateLiveTrainInfo(currentMin, nextArrOfficial, lastDepOfficial) {
-      if (!map) initMap();
-
-      // 1. TREN LLEGANDO A ORDUÑA (VERDE 🟢)
-      const arrMinOfficial = timeToMinutes(nextArrOfficial);
-      const arrMinLive = arrMinOfficial + liveDelays.arr;
-      const minUntilArr = arrMinLive - currentMin;
-
-      const depFromBilbaoMin = arrMinOfficial - 45;
-      const depFromBilbaoStr = minutesToTime(depFromBilbaoMin);
-      const arrAtOrdunaStr = minutesToTime(arrMinLive);
-
-      document.getElementById("train-arr-times").innerHTML = 
-        `Salida Bilbao: <b>${depFromBilbaoStr}</b> | Llegada estimada Orduña: <b>${arrAtOrdunaStr}</b>`;
-
-      const arrTextEl = document.getElementById("train-arr-text");
-      let arrCoords = [42.9970, -3.0110];
-
-      if (minUntilArr <= 0) {
-        arrTextEl.textContent = "Ubicación: Entrando en andén en Orduña (Llegada inminente)";
-        arrCoords = [42.9970, -3.0110];
-      } else if (minUntilArr >= 45) {
-        arrTextEl.textContent = `Ubicación: Saliendo de Bilbao Abando (llegará en ${minUntilArr} min)`;
-        arrCoords = [43.2598, -2.9272];
-      } else {
-        const info = getSectionAndCoords(minUntilArr, "to_orduna");
-        arrTextEl.textContent = `Ubicación: Entre ${info.segment} (llegará en ~${minUntilArr} min)`;
-        arrCoords = info.coords;
-      }
-
-      if (!greenMarker) {
-        greenMarker = L.circleMarker(arrCoords, { radius: 10, color: '#14532d', fillColor: '#22c55e', fillOpacity: 0.95 }).addTo(map);
-      } else {
-        greenMarker.setLatLng(arrCoords);
-      }
-      greenMarker.bindPopup(`<b>🟢 Tren llegando a Orduña</b><br>Salida Bilbao: ${depFromBilbaoStr}<br>Llegada Orduña: ${arrAtOrdunaStr}<br>${arrTextEl.textContent}`);
-
-      // 2. TREN ALEJÁNDOSE DE ORDUÑA (ROJO 🔴)
-      const depTextEl = document.getElementById("train-dep-text");
-      let depCoords = [42.9970, -3.0110];
-
-      if (!lastDepOfficial) {
-        document.getElementById("train-dep-times").innerHTML = "Sin salidas recientes";
-        depTextEl.textContent = "Esperando primer servicio del día";
-      } else {
-        const depFromOrdunaMin = timeToMinutes(lastDepOfficial) + liveDelays.dep;
-        const depFromOrdunaStr = minutesToTime(depFromOrdunaMin);
-        const arrAtBilbaoMin = depFromOrdunaMin + 45;
-        const arrAtBilbaoStr = minutesToTime(arrAtBilbaoMin);
-        const minSinceDep = currentMin - depFromOrdunaMin;
-
-        document.getElementById("train-dep-times").innerHTML = 
-          `Salida Orduña: <b>${depFromOrdunaStr}</b> | Llegada estimada Bilbao: <b>${arrAtBilbaoStr}</b>`;
-
-        if (minSinceDep <= 0) {
-          depTextEl.textContent = `Ubicación: En andén de Orduña (sale en ${Math.abs(minSinceDep)} min)`;
-          depCoords = [42.9970, -3.0110];
-        } else if (minSinceDep >= 45) {
-          depTextEl.textContent = `Ubicación: Llegado a Bilbao Abando (destino final)`;
-          depCoords = [43.2598, -2.9272];
-        } else {
-          // El tren lleva "minSinceDep" minutos alejándose desde Orduña (0 min)
-          // Obtenemos exactamente el tramo y las coordenadas correspondientes
-          const info = getSectionAndCoords(minSinceDep, "to_bilbao");
-          depTextEl.textContent = `Ubicación: Entre ${info.segment} (partió hace ${minSinceDep} min)`;
-          depCoords = info.coords;
-        }
-
-        if (!redMarker) {
-          redMarker = L.circleMarker(depCoords, { radius: 10, color: '#7f1d1d', fillColor: '#ef4444', fillOpacity: 0.95 }).addTo(map);
-        } else {
-          redMarker.setLatLng(depCoords);
-        }
-        redMarker.bindPopup(`<b>🔴 Tren alejándose de Orduña</b><br>Salida Orduña: ${depFromOrdunaStr}<br>Llegada Bilbao: ${arrAtBilbaoStr}<br>${depTextEl.textContent}`);
-      }
-
-      setTimeout(() => map.invalidateSize(), 200);
-    }
-
-    async function refreshLiveTimes() {
-      const now = new Date();
-      const currentMin = now.getHours() * 60 + now.getMinutes();
-      document.getElementById("current-clock").textContent = 
-        `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
-      await fetchRealTimeDelays();
-
-      const nextDepIndex = departuresFromOrduna.findIndex(t => timeToMinutes(t) >= currentMin);
-      const nextDep = nextDepIndex !== -1 ? departuresFromOrduna[nextDepIndex] : departuresFromOrduna[0];
-      const depMinOfficial = timeToMinutes(nextDep);
-      const depMinLive = depMinOfficial + liveDelays.dep;
-
-      const lastDep = nextDepIndex > 0 ? departuresFromOrduna[nextDepIndex - 1] : (nextDepIndex === 0 ? null : departuresFromOrduna[departuresFromOrduna.length - 1]);
-
-      document.getElementById("dep-official").textContent = nextDep;
-      document.getElementById("dep-live").textContent = minutesToTime(depMinLive);
-
-      const depBadge = document.getElementById("dep-status");
-      if (liveDelays.dep > 0) {
-        depBadge.textContent = `+${liveDelays.dep} min`;
-        depBadge.className = "status-badge badge-delay";
-      } else {
-        depBadge.textContent = "En hora";
-        depBadge.className = "status-badge badge-ontime";
-      }
-
-      const nextArr = arrivalsAtOrduna.find(t => timeToMinutes(t) >= currentMin) || arrivalsAtOrduna[0];
-      const arrMinOfficial = timeToMinutes(nextArr);
-      const arrMinLive = arrMinOfficial + liveDelays.arr;
-
-      document.getElementById("arr-official").textContent = nextArr;
-      document.getElementById("arr-live").textContent = minutesToTime(arrMinLive);
-
-      const arrBadge = document.getElementById("arr-status");
-      if (liveDelays.arr > 0) {
-        arrBadge.textContent = `+${liveDelays.arr} min`;
-        arrBadge.className = "status-badge badge-delay";
-      } else {
-        arrBadge.textContent = "En hora";
-        arrBadge.className = "status-badge badge-ontime";
-      }
-
-      updateLiveTrainInfo(currentMin, nextArr, lastDep);
-    }
-
-    refreshLiveTimes();
-    setInterval(refreshLiveTimes, 15000);
-
-    // 3. Radio Streaming con Buffer Time-Shift
+    // 2. Audio Player & Time-Shift logic
     const player = document.getElementById("audio-player");
     const radioBtn = document.getElementById("radio-btn");
     const radioStatus = document.getElementById("radio-status");
@@ -652,77 +327,6 @@
       document.getElementById("delay-slider").value = 0;
       delayValueLabel.textContent = "0 segundos (Directo)";
     });
-
-    // 4. Chat IA Gemini (gemini-3.8-flash)
-    function getStoredApiKey() { return localStorage.getItem("gemini_user_api_key"); }
-    function configureApiKey() {
-      const currentKey = getStoredApiKey() || "";
-      const newKey = prompt("Introduce tu Gemini API Key:", currentKey);
-      if (newKey !== null) {
-        if (newKey.trim() === "") {
-          localStorage.removeItem("gemini_user_api_key");
-          alert("Clave eliminada.");
-        } else {
-          localStorage.setItem("gemini_user_api_key", newKey.trim());
-          alert("Clave guardada con éxito.");
-        }
-      }
-    }
-
-    async function sendMessage() {
-      let apiKey = getStoredApiKey();
-      if (!apiKey) {
-        configureApiKey();
-        apiKey = getStoredApiKey();
-        if (!apiKey) return;
-      }
-
-      const input = document.getElementById("userInput");
-      const btn = document.getElementById("sendBtn");
-      const text = input.value.trim();
-      if (!text) return;
-
-      appendMessage(text, "user");
-      input.value = "";
-      btn.disabled = true;
-
-      const loadingMsg = appendMessage("Pensando...", "ai");
-      
-      const arrTimes = document.getElementById("train-arr-times").textContent;
-      const arrLoc = document.getElementById("train-arr-text").textContent;
-      const depTimes = document.getElementById("train-dep-times").textContent;
-      const depLoc = document.getElementById("train-dep-text").textContent;
-
-      const context = `Estación: Orduña (Línea C3 Cercanías Bilbao). Hora: ${document.getElementById("current-clock").textContent}. Siguiente salida oficial: ${document.getElementById("dep-official").textContent} (Tiempo real: ${document.getElementById("dep-live").textContent}). Siguiente llegada oficial: ${document.getElementById("arr-official").textContent} (Tiempo real: ${document.getElementById("arr-live").textContent}). Tren llegando (verde): ${arrTimes}, ${arrLoc}. Tren alejándose (rojo): ${depTimes}, ${depLoc}. Emisora: ${stationSelect.options[stationSelect.selectedIndex]?.text || "Ninguna"}. Retardo: ${currentDelay}s. Pregunta: ${text}`;
-
-      try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ contents: [{ parts: [{ text: context }] }] })
-        });
-        const data = await response.json();
-        if (data.candidates && data.candidates[0].content.parts[0].text) {
-          loadingMsg.textContent = data.candidates[0].content.parts[0].text;
-        } else {
-          loadingMsg.textContent = "Error al recibir respuesta de Gemini.";
-        }
-      } catch (e) {
-        loadingMsg.textContent = "Error de red o conexión.";
-      } finally {
-        btn.disabled = false;
-      }
-    }
-
-    function appendMessage(text, sender) {
-      const chat = document.getElementById("chat-container");
-      const bubble = document.createElement("div");
-      bubble.className = `bubble ${sender}`;
-      bubble.textContent = text;
-      chat.appendChild(bubble);
-      chat.scrollTop = chat.scrollHeight;
-      return bubble;
-    }
   </script>
 </body>
 </html>
